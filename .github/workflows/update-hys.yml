@@ -1,0 +1,35 @@
+name: Update Hys Formula
+
+on:
+  repository_dispatch:
+    types: [hys-release]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update formula
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+          TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          URL="https://github.com/superstarryeyes/hys/archive/refs/tags/${TAG}.tar.gz"
+          SHA256=$(curl -sL "$URL" | sha256sum | cut -d' ' -f1)
+          
+          sed -i "s|url \"https://github.com/superstarryeyes/hys/archive/.*\"|url \"${URL}\"|" Formula/hys.rb
+          sed -i "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" Formula/hys.rb
+
+      - name: Commit and push
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/hys.rb
+          git commit -m "hys: update to ${VERSION}"
+          git push
